@@ -1,4 +1,23 @@
 baseURL = "https://cecehodges.me"
 languageCode = "en-us"
-title = "Adventure to IT"
-theme = "indigo"
+title = "Bedside to Desktop"
+theme = "hyde-hyde"
+
+[params.social]
+    github = "cecehodges"
+    instagram = "cecemaxine"
+    linkedin = "cearahodges"    
+
+
+## Main Menu
+[[menu.main]]
+    name = "About"
+    identifier = "about"
+    weight = 300
+    url = "/about/"
+
+[[menu.main]]
+    name = "Posts"
+    weight = 100
+    identifier = "posts"
+    url = "/posts/"

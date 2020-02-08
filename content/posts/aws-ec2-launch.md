@@ -11,7 +11,12 @@ tags:
 - practice
 - walkthrough
 ---
-This post is to help you learn how to launch an EC2 instance in the AWS console. It is free to sign up for an AWS account, though you do have to enter a credit card. There is a way to set up budget that will alert you if you are getting close/are going to go over a certain amount. To learn more about budgets and how to set them up, AWS has excellent documentation [here](https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/budgets-create.html). 
+This post is to help you learn how to launch an EC2 instance using the AWS console. 
+
+## Opening an account
+It is free to sign up for an AWS account, though you do have to enter a credit card. There is a way to set up budget that will alert you if you are getting close/are going to go over a certain amount. To learn more about budgets and how to set them up, AWS has excellent documentation [here](https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/budgets-create.html). 
+
+## Launch an EC2 instance
 
 * Once you have logged into the AWS console, you will see a "Find Services" search bar. Type in "EC2" and select the result that pops up in the drop down feature. This will take you to the main EC2 page.
 
@@ -33,11 +38,12 @@ This post is to help you learn how to launch an EC2 instance in the AWS console.
 
 * It only takes a few minutes once we click Launch Instance for it to be ready for us to SSH in to. We will see a green circle stating that it is running in the status section of our EC2 console when it is ready. 
 
-**SSH'ing into our Instance**
+## SSH'ing into our Instance
 
 When you click on the instance, a "details" section will appear underneath it. We need to copy our public IPv4 address. Now open a terminal. 
 
 We will use the IP address in the following command:
+
 ```
 # ssh -i {full path of your keypair file in your computer} ec2-user@{instance public IPv4 address}
 ```

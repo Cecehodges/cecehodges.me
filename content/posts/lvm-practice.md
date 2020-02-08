@@ -13,19 +13,28 @@ tags:
 - walkthrough
 
 ---
-If you're like me, you may have a "use it or lose it" when it comes to skills. I don't want to lose the skills I've gained in the OCA, so here is a walk through of some LVM practice I did. You could use a VM software, but I used an AWS EC2 instance with an attached EBS volume for this practice in order to also keep up my skills while working in the console. Check out my other post on creating an EC2 instance if you need a refresher on how to do so. 
+We learned about LVM while at the OCA. In this post I'll walk you through configuring LVM on an AWS EC2 instance.
 
-When I configured my EC2, I used Centos 7 instead of the Amazon Linux 2. It says there can be a charge, but it will be minimal, especially if we delete our instance when we are done. I used Centos 7 since it is closest to Redhat Linux, which is what we learned during our time in the OCA. I added extra storage to this instance as well, an extra volume. This extra volume is where we will modify our partition table. 
+You could use a VM software, but I used an AWS EC2 instance with an attached EBS volume for this practice in order to also keep up my skills while working in the AWS console. 
+
+When I configured my EC2, I used Centos 7 instead of Amazon Linux 2. The aws marketplace says there can be a charge for running the AMI, but it will be minimal, especially if we delete our instance when we are done. I used Centos 7 since it is closest to Redhat Linux, which is what we learned during our time in the OCA. I added extra storage to this instance as well, an extra volume. This extra volume is where we will modify our partition table. 
+
+We'll begin the walkthrough from a running EC2 instance. Check out my other post on creating an EC2 instance if you need a refresher on how to do so. 
 
 Once we configure and launch our instance, we will need to SSH into it. Once there, we do need to install LVM onto our machine. I switched to root, since most of the commands we do need root permissions to be executed. 
+
 ```
 sudo -i
 ```
-Then we will need to install LVM. I learned that this EC2 instance does not come equipped with it.
+
+Then we will need to install LVM. The Centos AMI we're using does not come with the LVM tools installed.
+
 ```
 # yum install lvm2 -y
 ```
+
 Once it's installed, let's take a look at what we have as far as storage already. 
+
 ```
 # lsblk
     NAME    MAJ:MIN RM SIZE RO TYPE MOUNTPOINT
@@ -33,22 +42,27 @@ Once it's installed, let's take a look at what we have as far as storage already
     └─xvda1 202:1    0   8G  0 part /
     xvdb    202:16   0   8G  0 disk 
 ```
-xvda is our root storage, so we will use xvdb when creating our partitions. Here is an example we can use:
->* Create a volume group called Office, with a physical extent size of 32M.
->* Create a logical volume called IT, within the Office volume group that is 50 extents in size and is formatted as ext4 and mounted at /IT.
 
-First we need to determine the size of our partition.
+xvda is our root volume, so we will use xvdb when creating our partitions. Here are the goals for this configuration:
+
+> * Create a volume group called Office, with a physical extent size of 32M.
+> * Create a logical volume called IT, within the Office volume group that is 50 extents in size and is formatted as ext4 and mounted at /IT.
+
+First since the request specified extents, we need to determine the size in MB of our partition.
+
 >* Physical extent size of the Volume Group (VG) x logical volume (LV) extent size + 1 extra extent to account for wiggle room when building partitions. 
-
 > **32M x 50 extents (+1) -> 51 extents = 1632M**
 
-We will need this for our first partition. 
+We will need `1632M` for our first partition. 
 
 Now to create the 1st partition:
+
 ```
 fdisk /dev/xvdb
 ```
+
 There will be a welcome message, and then a command line waiting for your next entry. 
+
 ```
 Command (m for help): n
 Partition type:
@@ -62,16 +76,20 @@ Using default value 2048
 Last sector, +sectors or +size{K,M,G} (2048-16777215, default 16777215): +1632M
 Partition 1 of type Linux and of size 1.6fdis GiB is set
 ```
-For the most part, you can click through the options after entering 'n' for new by typing the enter key. Be careful, once you get to the "Last sector" portion, this is where you enter the size. The '+' is important, as well as specifying K, M, or G. 
+
+For the most part, you can skip through the options after entering 'n' for new by typing the enter key to accept default values. Be careful, once you get to the "Last sector" portion, this is where you enter the size. The '+' is important, as well as specifying K, M, or G. 
 
 Before writing to the partition, we want to set the type of partition we're using. Use 't' for 'type.'
+
 ```
 Command (m for help): t
 Selected partition 1
 Hex code (type L to list all codes): 8e
 Changed type of partition 'Linux' to 'Linux LVM'
 ```
+
 To see the changes we've made, let's use 'p' for 'print.' Once we're satisfied with the results, we can use 'w' to alter the partition table. 
+
 ```
 Command (m for help): p
 
@@ -88,16 +106,22 @@ Disk identifier: 0x29eed0eb
 Command (m for help): w
 The partition table has been altered!
 ```
+
 Now to create our partition, volume group, and logical volume. You can always use --help after the first argument for additional options. 
+
 ```
 # pvcreate /dev/xvdb1
     Physical volume "/dev/xvdb1" successfully created.
+
 # vgcreate -s 32 Office /dev/xvdb1
     Volume group "Office" successfully created
+
 # lvcreate -l 50 -n IT Office
     Logical volume "IT" created.
 ```
-Another lsblk will show us the new partition table. 
+
+Another `lsblk` will show us the new partition table. 
+
 ```
 # lsblk
     NAME          MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
@@ -107,29 +131,40 @@ Another lsblk will show us the new partition table.
     └─xvdb1       202:17   0  1.6G  0 part 
     └─Office-IT 253:0    0  1.6G  0 lvm  
 ```
+
 To make our logical volume usable and available at boot time, we need to do a few more steps. Let's format our volume to use the ext4 filesystem.
+
 ```
 # mkfs -t ext4 /dev/Office/IT
 ```
-Now we want it to be available when we reboot our instance. This will require us to modify the /etc/fstab file. Let's make a copy of this file in our home directory first, just in case we break our machine we have a back up.
+
+Now we want it to be available when we reboot our instance. This will require us to modify the `/etc/fstab` file. Let's make a copy of this file in our home directory first, just in case we break our machine we have a back up.
+
 ```
 # cp /etc/fstab ~
 ```
-Use the blkid command to find out what the UUID (universally unique identifier) for our logical volume is. It will be different for each person. Copy the identifier. Now let's open the etc/fstab file. I use VIM for this. (VIM will need to be installed on this instance since it does not come pre-installed.) 
+
+Use the `blkid` command to find out what the UUID (universally unique identifier) for our logical volume is. It will be different for each volume. Copy the identifier. Now let's open the `/etc/fstab` file. I use VIM for this. (VIM will need to be installed on this instance since it does not come pre-installed.) 
 
 ```
 vim /etc/fstab
 ```
+
 Once opened, you will see an UUID already there, do not edit this one. Below is an example of me entering the information for our example. 
+
 ```
 UUID=82587fd7-c0cd-4512-b0a2-db6b5bdd0302 /IT ext4 defaults 0 0
 ```
-The /IT is the mount point and the ext4 is the file type. We need to create the mount point /IT and mount our volume to it.
+
+The `/IT` is the mount point and the `ext4` is the file type. We need to create the mount point `/IT` and mount our volume to it.
+
 ```
 # mkdir /IT
 # mount -av
 ```
-Mount -av = mount everything verbosely. One last lsblk will show us the final partition table.
+
+`mount -av` = mount everything verbosely. One last `lsblk` will show us the final partition table.
+
 ```
 # lsblk
     NAME          MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
@@ -139,5 +174,6 @@ Mount -av = mount everything verbosely. One last lsblk will show us the final pa
     └─xvdb1       202:17   0  1.6G  0 part 
     └─Office-IT 253:0    0  1.6G  0 lvm  /IT
 ```
-A final reboot will show us if everything works. Reboot our instance, and do lsblk again. If everything is still in place, we did it! I know this tutorial is a bit lengthy, but LVM is not always a simple topic. I wanted to be as thorough as I could for being a beginning myself, and hopefully this helped refresh your memory on some simple LVM. 
+
+A final reboot will show us if everything works. Reboot our instance, and run `lsblk` again. If everything is still in place, we did it! I know this tutorial is a bit lengthy, but LVM is not always a simple topic. I wanted to be as thorough as I could for being a beginner myself, and hopefully this helped refresh your memory on some simple LVM. 
 

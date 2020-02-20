@@ -1,7 +1,7 @@
 ---
 title: "Lvm Practice on AWS EC2 and EBS"
 date: 2020-02-07T14:21:21-06:00
-draft: true
+draft: false
 tags:
 - LVM
 - EC2

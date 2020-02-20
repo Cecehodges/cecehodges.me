@@ -1,7 +1,7 @@
 ---
 title: "Launching an AWS EC2 Instance"
 date: 2020-02-07T14:37:53-06:00
-draft: true
+draft: false
 tags:
 - EC2
 - beginner
